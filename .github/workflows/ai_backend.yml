@@ -1,40 +1,47 @@
 name: AI Core Engine
-on: [repository_dispatch]
+on:
+  repository_dispatch:
+    types: [run]
+
 jobs:
   main:
     runs-on: ubuntu-latest
+    permissions: 
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Process
+      
+      - name: Process AI Task
         shell: python
         run: |
-          import os, requests, json
+          import os, requests
           prompt = "${{ github.event.client_payload.prompt }}"
-          weight = float("${{ github.event.client_payload.weight }}")
+          weight = "${{ github.event.client_payload.weight }}"
           type = "${{ github.event.client_payload.type }}"
           
+          # Генерируем контент
           if type == "code":
               res = requests.post("https://text.pollinations.ai/", json={
                   "messages": [{"role": "user", "content": prompt}],
                   "model": "openai",
-                  "seed": 42,
-                  "temperature": weight
+                  "temperature": float(weight)
               })
-              with open("index.html", "w") as f: f.write(res.text)
-              
+              content = res.text
           elif type == "image":
-              img_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1024&height=1024&seed=42"
-              with open("index.html", "w") as f: f.write(f"<img src='{img_url}'>")
+              content = f"<img src='https://image.pollinations.ai/prompt/{prompt}?width=1024&height=1024' style='width:100%'>"
+          else:
+              content = f"<audio controls src='https://text.pollinations.ai/tts/{prompt}'></audio>"
           
-          elif type == "audio":
-              # Используем TTS/Audio API напрямую
-              audio_url = f"https://text.pollinations.ai/tts/{prompt}"
-              with open("index.html", "w") as f: f.write(f"<audio controls src='{audio_url}'></audio>")
+          # Записываем строго в index.html, чтобы Pages сразу это подхватил
+          with open("index.html", "w", encoding="utf-8") as f:
+              f.write(f"<html><body style='background:#000; color:#fff;'>{content}</body></html>")
 
       - name: Push Result
         run: |
-          git config --global user.name "AI"
+          git config --global user.name "AI-Bot"
+          git config --global user.email "bot@github.com"
           git add index.html
-          git commit -m "update" || exit 0
+          git commit -m "update index.html" || exit 0
           git push
-        env: { GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }} }
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
