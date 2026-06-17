@@ -3,6 +3,12 @@ on:
   repository_dispatch:
     types: [ai_real_run]
 
+# Даем воркфлоу права на запись в репозиторий и на обновление GitHub Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   generate_code_job:
     runs-on: ubuntu-latest
@@ -14,20 +20,18 @@ jobs:
         run: |
           echo "Запуск ИИ генерации под промпт: ${{ github.event.client_payload.user_prompt }}"
           
-          # Запрос идет прямо с серверов Гитхаба, со стопроцентным обходом CORS
           RESPONSE=$(curl -s -X POST https://text.pollinations.ai/ \
             -H "Content-Type: application/json" \
             -d '{
               "messages": [
-                {"role": "system", "content": "Ты — профессиональный веб-разработчик. Напиши полноценный, полностью рабочий, красивый и уникальный HTML код с CSS и JS под запрос пользователя без сокращений. Выводи ТОЛЬКО чистый код. Никакого лишнего текста, markdown тегов типа ```html или пояснений. Только чистый код страницы."},
+                {"role": "system", "content": "Ты — профессиональный веб-разработчик. Напиши полноценный, полностью рабочий HTML код с CSS и JS под запрос пользователя. Выводи ТОЛЬКО чистый код, без markdown тегов."},
                 {"role": "user", "content": "${{ github.event.client_payload.user_prompt }}"}
               ],
               "model": "openai"
             }')
           
-          # Записываем чистый результат работы нейросети в файл result.html
           echo "$RESPONSE" > result.html
-          echo "Сборка завершена. Файл result.html готов."
+          echo "Файл result.html готов."
 
       - name: Commit and Push to Repo
         run: |
@@ -38,3 +42,9 @@ jobs:
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Вот этот шаг принудительно обновляет твой GitHub Pages прямо во время работы Actions!
+      - name: Trigger GitHub Pages Deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages # Гитхаб возьмет обновленный корень репа и выкатит на сайт
