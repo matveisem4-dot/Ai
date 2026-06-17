@@ -1,7 +1,5 @@
-name: AI Backend Generator
-on:
-  repository_dispatch:
-    types: [ai_real_run]
+name: AI Pro Generator
+on: [repository_dispatch]
 
 jobs:
   run:
@@ -9,15 +7,31 @@ jobs:
     permissions: { contents: write }
     steps:
       - uses: actions/checkout@v4
-      - name: Generate
+      - name: Logic Branch
         run: |
-          RESPONSE=$(curl -s -X POST https://text.pollinations.ai/ \
-            -H "Content-Type: application/json" \
-            -d '{"messages": [{"role": "user", "content": "${{ github.event.client_payload.user_prompt }}"}], "model": "openai"}')
+          PROMPT="${{ github.event.client_payload.prompt }}"
+          MODE="${{ github.event.client_payload.mode }}"
+          TYPE="${{ github.event.client_payload.type }}"
           
-          # Генерируем основной результат
-          echo "$RESPONSE" > index.html
+          # Усложнение промпта в зависимости от режима
+          SYSTEM="Ты ИИ-разработчик."
+          if [ "$MODE" == "mega" ]; then
+            SYSTEM="Сначала подумай шаг за шагом, составь план, затем напиши идеальный код."
+          fi
+
+          if [ "$TYPE" == "text" ]; then
+             curl -s -X POST https://text.pollinations.ai/ -H "Content-Type: application/json" \
+             -d "{\"messages\": [{\"role\": \"system\", \"content\": \"$SYSTEM\"}, {\"role\": \"user\", \"content\": \"$PROMPT\"}], \"model\": \"openai\"}" > index.html
           
+          elif [ "$TYPE" == "image" ]; then
+             # Генерируем картинку через pollinations.ai
+             echo "<img src='https://image.pollinations.ai/prompt/${PROMPT// /%20}'>" > index.html
+             
+          elif [ "$TYPE" == "music" ]; then
+             # Генерируем музыку
+             echo "Музыка генерируется: <a href='https://suno.com/search?q=${PROMPT// /%20}'>Слушать по запросу</a>" > index.html
+          fi
+
       - name: Push
         run: |
           git config --global user.name "bot"
