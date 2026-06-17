@@ -1,0 +1,40 @@
+name: Real AI Backend Engine
+on:
+  repository_dispatch:
+    types: [ai_real_run]
+
+jobs:
+  generate_code_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Call AI Engine
+        run: |
+          echo "Запуск ИИ генерации под промпт: ${{ github.event.client_payload.user_prompt }}"
+          
+          # Запрос идет прямо с серверов Гитхаба, со стопроцентным обходом CORS
+          RESPONSE=$(curl -s -X POST https://text.pollinations.ai/ \
+            -H "Content-Type: application/json" \
+            -d '{
+              "messages": [
+                {"role": "system", "content": "Ты — профессиональный веб-разработчик. Напиши полноценный, полностью рабочий, красивый и уникальный HTML код с CSS и JS под запрос пользователя без сокращений. Выводи ТОЛЬКО чистый код. Никакого лишнего текста, markdown тегов типа ```html или пояснений. Только чистый код страницы."},
+                {"role": "user", "content": "${{ github.event.client_payload.user_prompt }}"}
+              ],
+              "model": "openai"
+            }')
+          
+          # Записываем чистый результат работы нейросети в файл result.html
+          echo "$RESPONSE" > result.html
+          echo "Сборка завершена. Файл result.html готов."
+
+      - name: Commit and Push to Repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add result.html
+          git commit -m "ИИ сгенерировал код для: ${{ github.event.client_payload.user_prompt }}" || exit 0
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
