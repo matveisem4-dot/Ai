@@ -3,37 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Actions AI Controller</title>
+    <title>AI Control Center</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: #06090f; color: #00ff66; font-family: monospace; padding: 15px; display: flex; flex-direction: column; height: 100vh; }
-        header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #00ff66; padding-bottom: 10px; }
-        .main-layout { display: flex; flex-direction: column; flex: 1; gap: 12px; max-width: 800px; width: 100%; margin: 0 auto; }
-        .config-panel { background: #0a0f1d; padding: 10px; border: 1px solid #00ff66; display: flex; flex-direction: column; gap: 8px; }
-        .row { display: flex; gap: 10px; }
-        input { flex: 1; background: #000; border: 1px solid #00ff66; color: #00ff66; padding: 10px; font-family: inherit; outline: none; }
-        .btn { background: #00ff66; color: #000; border: none; padding: 0 20px; font-family: inherit; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn:disabled { background: #004411; color: #00aa44; }
-        .monitor { font-size: 12px; color: #00aa44; padding: 6px; border: 1px dashed #004411; }
-        .terminal { flex: 1; border: 1px solid #00ff66; background: #000; padding: 15px; overflow-y: auto; white-space: pre-wrap; }
+        body { background: #06090f; color: #00ff66; font-family: monospace; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input, button { width: 100%; padding: 15px; margin-bottom: 10px; background: #000; border: 1px solid #00ff66; color: #00ff66; }
+        button { background: #00ff66; color: #000; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
+<div class="container">
+    <h2>AI CONTROL PANEL</h2>
+    <input type="text" id="aiPrompt" placeholder="Что сгенерировать?">
+    <button onclick="fireAction()">ЗАПУСК ГЕНЕРАЦИИ</button>
+    <div id="status"></div>
+</div>
 
-<header>
-    <h1>GITHUB AI CORE v12.0</h1>
-    <p>Реальный бэкенд на серверах GitHub Actions</p>
-</header>
+<script>
+    async function fireAction() {
+        const prompt = document.getElementById('aiPrompt').value;
+        const status = document.getElementById('status');
+        
+        // Автоматически берет данные из адреса репозитория
+        // Если твоя ссылка: matveisem4.github.io/ai-core/
+        // То он сам определит логин и репозиторий
+        const pathParts = window.location.pathname.split('/');
+        const repo = "matveisem4/ai-core"; // Вставь сюда свой логин/реп вручную один раз
+        
+        status.innerText = "Отправка команды...";
 
-<div class="main-layout">
-    <div class="config-panel">
-        <div class="row">
-            <input type="text" id="ghRepo" placeholder="логин/репозиторий (например: ivan/ai-core)">
-            <input type="password" id="ghToken" placeholder="Вставь сюда свой токен ghp_...">
-        </div>
-        <div class="row">
-            <input type="text" id="aiPrompt" placeholder="Что сгенерировать? (например: игра змейка на html)...">
-            <button class="btn" id="runBtn" onclick="fireAction()">Запустить</button>
+        await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json'
+                // Токен теперь НЕ нужен здесь, мы все перенесли в Actions!
+            },
+            body: JSON.stringify({
+                event_type: "ai_real_run",
+                client_payload: { user_prompt: prompt }
+            })
+        });
+        status.innerText = "Сигнал отправлен! Жди 40 секунд.";
+    }
+</script>
+</body>
+</html>
         </div>
     </div>
 
