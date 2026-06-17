@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Engine Control</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        .grid { display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
+        input, select, button { background: #111; color: #0f0; border: 1px solid #0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="grid">
+        <input id="prompt" placeholder="Задача...">
+        <select id="weight">
+            <option value="0.1">Легкий (Fast)</option>
+            <option value="0.7">Сложный (Balanced)</option>
+            <option value="1.0">Мега-сложный (Max Creativity)</option>
+        </select>
+        <button onclick="task('code')">Код</button>
+        <button onclick="task('image')">Картинка</button>
+        <button onclick="task('audio')">Звук</button>
+    </div>
+    <script>
+        async function task(type) {
+            const prompt = document.getElementById('prompt').value;
+            const weight = document.getElementById('weight').value;
+            await fetch(`https://api.github.com/repos/ТВОЙ_ЛОГИН/ai-core/dispatches`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_type: "run", client_payload: { prompt, weight, type } })
+            });
+            alert("Задание ушло на сервер...");
+        }
+    </script>
+</body>
+</html>
