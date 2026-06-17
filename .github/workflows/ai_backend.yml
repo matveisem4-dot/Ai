@@ -1,43 +1,40 @@
-name: AI Pro Generator
+name: AI Core Engine
 on: [repository_dispatch]
-
 jobs:
-  run:
+  main:
     runs-on: ubuntu-latest
-    permissions: { contents: write }
     steps:
       - uses: actions/checkout@v4
-      - name: Logic Branch
+      - name: Process
+        shell: python
         run: |
-          PROMPT="${{ github.event.client_payload.prompt }}"
-          MODE="${{ github.event.client_payload.mode }}"
-          TYPE="${{ github.event.client_payload.type }}"
+          import os, requests, json
+          prompt = "${{ github.event.client_payload.prompt }}"
+          weight = float("${{ github.event.client_payload.weight }}")
+          type = "${{ github.event.client_payload.type }}"
           
-          # Усложнение промпта в зависимости от режима
-          SYSTEM="Ты ИИ-разработчик."
-          if [ "$MODE" == "mega" ]; then
-            SYSTEM="Сначала подумай шаг за шагом, составь план, затем напиши идеальный код."
-          fi
-
-          if [ "$TYPE" == "text" ]; then
-             curl -s -X POST https://text.pollinations.ai/ -H "Content-Type: application/json" \
-             -d "{\"messages\": [{\"role\": \"system\", \"content\": \"$SYSTEM\"}, {\"role\": \"user\", \"content\": \"$PROMPT\"}], \"model\": \"openai\"}" > index.html
+          if type == "code":
+              res = requests.post("https://text.pollinations.ai/", json={
+                  "messages": [{"role": "user", "content": prompt}],
+                  "model": "openai",
+                  "seed": 42,
+                  "temperature": weight
+              })
+              with open("index.html", "w") as f: f.write(res.text)
+              
+          elif type == "image":
+              img_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1024&height=1024&seed=42"
+              with open("index.html", "w") as f: f.write(f"<img src='{img_url}'>")
           
-          elif [ "$TYPE" == "image" ]; then
-             # Генерируем картинку через pollinations.ai
-             echo "<img src='https://image.pollinations.ai/prompt/${PROMPT// /%20}'>" > index.html
-             
-          elif [ "$TYPE" == "music" ]; then
-             # Генерируем музыку
-             echo "Музыка генерируется: <a href='https://suno.com/search?q=${PROMPT// /%20}'>Слушать по запросу</a>" > index.html
-          fi
+          elif type == "audio":
+              # Используем TTS/Audio API напрямую
+              audio_url = f"https://text.pollinations.ai/tts/{prompt}"
+              with open("index.html", "w") as f: f.write(f"<audio controls src='{audio_url}'></audio>")
 
-      - name: Push
+      - name: Push Result
         run: |
-          git config --global user.name "bot"
-          git config --global user.email "bot@bot.com"
+          git config --global user.name "AI"
           git add index.html
-          git commit -m "AI Update" || exit 0
+          git commit -m "update" || exit 0
           git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+        env: { GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }} }
